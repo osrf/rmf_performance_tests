@@ -35,7 +35,9 @@ void print_result(
   const std::string& label,
   const std::size_t samples,
   const double total_time,
-  const std::size_t node_count);
+  const std::size_t node_count,
+  const rmf_traffic::agv::Plan::Result& result,
+  const rmf_traffic::agv::Graph& graph);
 
 double test_planner_timing_no_cache(
   const std::string& label,

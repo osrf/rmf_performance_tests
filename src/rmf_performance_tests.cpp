@@ -49,14 +49,46 @@ void print_result(
   const std::string& label,
   const std::size_t samples,
   const double total_time,
-  const std::size_t node_count)
+  const std::size_t node_count,
+  const rmf_traffic::agv::Plan::Result& result,
+  const rmf_traffic::agv::Graph& graph)
 {
   std::cout << label
             << "\n -- Total time for " << samples << " samples: "
             << total_time
             << "\n -- Average time per run: " << total_time / samples
             << "\n -- Node count: " << node_count
-            << "\n" << std::endl;
+            << "\n -- Plan: ";
+
+  if (result.success())
+  {
+    for (const auto& wp : result->get_waypoints())
+    {
+      if (wp.graph_index().has_value())
+      {
+        const auto* name = graph.get_waypoint(*wp.graph_index()).name();
+        if (name)
+          std::cout << *name;
+        else
+          std::cout << "[#" << *wp.graph_index() << "]";
+      }
+      else
+      {
+        std::cout << "<" << wp.position().x() << ", " << wp.position().y()
+                  << ">";
+      }
+
+      std::cout << " --> ";
+    }
+
+    std::cout << "(end)";
+  }
+  else
+  {
+    std::cout << "FAILURE";
+  }
+
+  std::cout << std::endl;
 }
 
 double test_planner_timing_no_cache(
@@ -69,11 +101,12 @@ double test_planner_timing_no_cache(
 {
   // Run a test where we produce a new planner every time so we see what the
   // timing is if the cache is blank
+  std::optional<rmf_traffic::agv::Plan::Result> result;
   const auto begin_time = std::chrono::steady_clock::now();
   for (std::size_t i = 0; i < samples; ++i)
   {
     rmf_traffic::agv::Planner planner(config, options);
-    planner.plan(start, goal);
+    result = planner.plan(start, goal);
   }
   const auto finish_time = std::chrono::steady_clock::now();
 
@@ -83,7 +116,8 @@ double test_planner_timing_no_cache(
   const auto nodes = rmf_traffic::agv::Planner::Debug::node_count(
     rmf_traffic::agv::Planner(config, options).plan(start, goal));
 
-  print_result(label + " | No Cache", samples, total_time, nodes);
+  print_result(label + " | No Cache", samples, total_time, nodes, *result,
+               config.graph());
 
   return total_time;
 }
@@ -101,10 +135,11 @@ double test_planner_timing_with_cache(
   rmf_traffic::agv::Planner planner(config, options);
   planner.plan(start, goal);
 
+  std::optional<rmf_traffic::agv::Plan::Result> result;
   const auto begin_time = std::chrono::steady_clock::now();
   for (std::size_t i = 0; i < samples; ++i)
   {
-    planner.plan(start, goal);
+    result = planner.plan(start, goal);
   }
   const auto finish_time = std::chrono::steady_clock::now();
 
@@ -114,7 +149,8 @@ double test_planner_timing_with_cache(
   const auto nodes = rmf_traffic::agv::Planner::Debug::node_count(
     rmf_traffic::agv::Planner(config, options).plan(start, goal));
 
-  print_result(label + " | With Cache", samples, total_time, nodes);
+  print_result(label + " | With Cache", samples, total_time, nodes, *result,
+               config.graph());
 
   return total_time;
 }
