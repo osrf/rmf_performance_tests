@@ -1,0 +1,6 @@
+building:
+  filename: alt_office.building.yaml
+name: office
+traffic_maps:
+  {}
+version: 1
