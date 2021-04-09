@@ -76,6 +76,9 @@ void rmf_performance_tests::scenario::parse_scenario(std::string scenario_file,
         }
         else
         {
+          throw YAML::ParserException(
+            velocity.Mark(),
+            "Robot [" + name + "] is missing key [velocity]");
           std::cout << "Robot [" << name <<
             "] is missing key [limits[linear[velocity]]]. Skipping entry" <<
             std::endl;
@@ -252,62 +255,88 @@ void rmf_performance_tests::scenario::parse_scenario(std::string scenario_file,
     double initial_orientation;
     std::string initial_waypoint;
 
-    const auto& start = obstacle["start"];
-    if (start)
+    const auto& yaml_trajectory = obstacle["trajectory"];
+    if (yaml_trajectory)
     {
-      const auto& time = start["initial_time"];
-      if (time)
+      rmf_traffic::Trajectory trajectory;
+      for (const auto& wp : yaml_trajectory)
       {
-        initial_time = time.as<std::size_t>(0);
+        const double time = wp["time"].as<double>();
+        const auto& p = wp["position"];
+        const Eigen::Vector3d position(
+          p[0].as<double>(), p[1].as<double>(), p[2].as<double>());
+
+        const auto& v = wp["velocity"];
+        const Eigen::Vector3d velocity(
+          v[0].as<double>(), v[1].as<double>(), v[2].as<double>());
+
+        trajectory.insert(
+          rmf_traffic::Time(rmf_traffic::time::from_seconds(time)),
+          position, velocity);
+      }
+
+      const std::string map = obstacle["map"].as<std::string>();
+      scenario.obstacle_routes.push_back({name, {map, trajectory}});
+    }
+    else
+    {
+      const auto& start = obstacle["start"];
+      if (start)
+      {
+        const auto& time = start["initial_time"];
+        if (time)
+        {
+          initial_time = time.as<std::size_t>(0);
+        }
+        else
+        {
+          std::cout << "Robot [" << name <<
+            "] is missing key [start[initial_time]]. Using default value [0]." <<
+            std::endl;
+        }
+        const auto& waypoint = start["initial_waypoint"];
+        if (waypoint)
+        {
+          initial_waypoint = waypoint.as<std::string>();
+        }
+        else
+        {
+          std::cout << "Robot [" << name <<
+            "] is missing key [start[initial_waypoint]]. Skipping entry." <<
+            std::endl;
+          continue;
+        }
+        const auto& orientation = start["initial_orientation"];
+        if (orientation)
+        {
+          initial_orientation = waypoint.as<double>(0);
+        }
+        else
+        {
+          std::cout << "Robot [" << name <<
+            "] is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
+                    << std::endl;
+        }
       }
       else
       {
         std::cout << "Robot [" << name <<
-          "] is missing key [start[initial_time]]. Using default value [0]." <<
-          std::endl;
-      }
-      const auto& waypoint = start["initial_waypoint"];
-      if (waypoint)
-      {
-        initial_waypoint = waypoint.as<std::string>();
-      }
-      else
-      {
-        std::cout << "Robot [" << name <<
-          "] is missing key [start[initial_waypoint]]. Skipping entry." <<
-          std::endl;
+          "] is missing key [start]. Skipping entry." << std::endl;
         continue;
       }
-      const auto& orientation = start["initial_orientation"];
-      if (orientation)
+
+      const auto& goal = obstacle["goal"];
+      if (goal)
       {
-        initial_orientation = waypoint.as<double>(0);
+        scenario.obstacle_plans.push_back({name, initial_time, initial_orientation,
+            initial_waypoint, goal.as<std::string>()});
       }
       else
       {
         std::cout << "Robot [" << name <<
-          "] is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
-                  << std::endl;
+          "] is missing key [goal]. Skipping entry." << std::endl;
+        continue;
       }
-    }
-    else
-    {
-      std::cout << "Robot [" << name <<
-        "] is missing key [start]. Skipping entry." << std::endl;
-      continue;
-    }
-
-    const auto& goal = obstacle["goal"];
-    if (goal)
-    {
-      scenario.obstacles.push_back({name, initial_time, initial_orientation,
-          initial_waypoint, goal.as<std::string>()});
-    }
-    else
-    {
-      std::cout << "Robot [" << name <<
-        "] is missing key [goal]. Skipping entry." << std::endl;
-      continue;
     }
   }
 
