@@ -69,13 +69,41 @@ double test_planner_timing_no_cache(
 {
   // Run a test where we produce a new planner every time so we see what the
   // timing is if the cache is blank
+  std::optional<rmf_traffic::agv::Plan> plan;
   const auto begin_time = std::chrono::steady_clock::now();
   for (std::size_t i = 0; i < samples; ++i)
   {
     rmf_traffic::agv::Planner planner(config, options);
-    planner.plan(start, goal);
+    plan = *planner.plan(start, goal);
   }
   const auto finish_time = std::chrono::steady_clock::now();
+
+  const auto& graph = config.graph();
+  std::cout << "Solution: ";
+  for (const auto& wp : plan->get_waypoints())
+  {
+    std::cout << rmf_traffic::time::to_seconds(wp.time().time_since_epoch())
+              << ": ";
+    if (wp.graph_index().has_value())
+    {
+      const auto index = wp.graph_index().value();
+      const auto& gwp = graph.get_waypoint(index);
+      if (gwp.name())
+        std::cout << *gwp.name();
+      else
+        std::cout << index;
+    }
+    else
+    {
+    }
+
+    const auto p = wp.position();
+    std::cout << " (" << p[0] << ", " << p[1] << ")";
+
+    std::cout << " -> ";
+  }
+
+  std::cout << "Done" << std::endl;
 
   const double total_time = rmf_traffic::time::to_seconds(
     finish_time - begin_time);

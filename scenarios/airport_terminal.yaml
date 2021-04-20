@@ -13,10 +13,10 @@ obstacles:
 
   - robot: main
     start:
-      initial_time: 0
-      initial_waypoint: s11
+      initial_time: 100
+      initial_waypoint: n30
       initial_orientation: 0
-    goal: n24
+    goal: n28
 
   # - robot: main
   #   start:
