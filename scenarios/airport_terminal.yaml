@@ -1,4 +1,4 @@
-samples: 1
+samples: 100
 
 robots:
   main:
@@ -9,14 +9,21 @@ robots:
       footprint: {shape: circle, radius: 0.2}
     graph: /airport_terminal/nav_graphs/1.yaml
 
+  obstacle:
+    limits:
+      linear: {velocity: 0.5, acceleration: 2.0}
+      angular: {velocity: 0.75, acceleration: 1.5}
+    profile:
+      footprint: {shape: circle, radius: 0.2}
+    graph: /airport_terminal/nav_graphs/1.yaml
+
 obstacles:
 
-  - robot: main
-    start:
-      initial_time: 0
-      initial_waypoint: s11
-      initial_orientation: 0
-    goal: n24
+  - robot: obstacle
+    trajectory:
+      - {time: 70, position: [115.14, -6, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 190, position: [115.14, -6, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L1
 
   # - robot: main
   #   start:

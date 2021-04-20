@@ -99,7 +99,7 @@ double test_planner_timing_no_cache(
   for (const auto& wp : plan->get_waypoints())
   {
     std::cout << rmf_traffic::time::to_seconds(wp.time().time_since_epoch())
-              << ":";
+              << ": ";
     if (wp.graph_index().has_value())
     {
       const auto index = wp.graph_index().value();
@@ -111,9 +111,10 @@ double test_planner_timing_no_cache(
     }
     else
     {
-      const auto p = wp.position();
-      std::cout << "(" << p[0] << ", " << p[1] << ")";
     }
+
+    const auto p = wp.position();
+    std::cout << " (" << p[0] << ", " << p[1] << ")";
 
     std::cout << " -> ";
   }
