@@ -34,13 +34,20 @@ struct Plan
   std::string goal;
 };
 
+struct Route
+{
+  std::string robot;
+  rmf_traffic::Route route;
+};
+
 struct Description
 {
   std::size_t samples;
 
   std::unordered_map<std::string,
     rmf_traffic::agv::Planner::Configuration> robots;
-  std::vector<Plan> obstacles;
+  std::vector<Plan> obstacle_plans;
+  std::vector<Route> obstacle_routes;
 
   Plan plan;
 };

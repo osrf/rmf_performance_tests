@@ -1,0 +1,33 @@
+samples: 1
+
+robots:
+  main:
+    limits:
+      linear: {velocity: 0.5, acceleration: 0.75}
+      angular: {velocity: 0.6, acceleration: 2.0}
+    profile:
+      footprint: {shape: circle, radius: 0.2}
+    graph: /alt_office/nav_graphs/0.yaml
+
+  obstacle:
+    limits:
+      linear: {velocity: 0.5, acceleration: 0.75}
+      angular: {velocity: 0.6, acceleration: 2.0}
+    profile:
+      footprint: {shape: circle, radius: 0.01}
+
+obstacles:
+
+  - robot: obstacle
+    trajectory:
+      - {time: 0, position: [15.5, -6.929, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 600, position: [15.5, -6.929, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L1
+
+plan:
+  robot: main
+  start:
+    initial_time: 0
+    initial_waypoint: pantry
+    initial_orientation: 0
+  goal: station_1

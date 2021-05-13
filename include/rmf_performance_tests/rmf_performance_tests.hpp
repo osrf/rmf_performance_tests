@@ -31,6 +31,11 @@ rmf_traffic::schedule::Participant add_obstacle(
   const rmf_traffic::agv::Plan::Start& start,
   const rmf_traffic::agv::Plan::Goal& goal);
 
+rmf_traffic::schedule::Participant add_obstacle(
+  const std::shared_ptr<rmf_traffic::schedule::Database>& database,
+  const rmf_traffic::Profile& profile,
+  const rmf_traffic::Route& route);
+
 void print_result(
   const std::string& label,
   const std::size_t samples,
