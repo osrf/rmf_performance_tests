@@ -74,6 +74,10 @@ void rmf_performance_tests::scenario::parse(
   const std::string key_graph = "graph";
   const std::string key_obstacles = "obstacles";
   const std::string key_robot = "robot";
+  const std::string key_trajectory = "trajectory";
+  const std::string key_time = "time";
+  const std::string key_position = "position";
+  const std::string key_map = "map";
   const std::string key_start = "start";
   const std::string key_goal = "goal";
   const std::string key_initial_time = "initial_time";
@@ -119,7 +123,194 @@ void rmf_performance_tests::scenario::parse(
       "Scenario file is missing the [samples] key. Using default value [100]" <<
       std::endl;
   }
-  std::cout<<description.samples<<std::endl;
+
+  std::unordered_set<std::string> graph_required;
+
+  const YAML::Node obstacles = scenario_config[key_obstacles];
+  for (const auto& obstacle : obstacles)
+  {
+    if (!obstacle[key_robot])
+    {
+      throw YAML::ParserException(
+              obstacle.Mark(),
+              "Obstacle is missing [robot] key.");
+    }
+
+    const std::string& name = obstacle[key_robot].as<std::string>();
+
+    std::size_t initial_time;
+    double initial_orientation;
+    std::string initial_waypoint;
+
+    const auto& yaml_trajectory = obstacle[key_trajectory];
+    if (yaml_trajectory)
+    {
+      rmf_traffic::Trajectory trajectory;
+      for (const auto& wp : yaml_trajectory)
+      {
+        const double time = wp[key_time].as<double>();
+        const auto& p = wp[key_position];
+        const Eigen::Vector3d position(
+          p[0].as<double>(), p[1].as<double>(), p[2].as<double>());
+
+        const auto& v = wp[key_velocity];
+        const Eigen::Vector3d velocity(
+          v[0].as<double>(), v[1].as<double>(), v[2].as<double>());
+
+        trajectory.insert(
+          rmf_traffic::Time(rmf_traffic::time::from_seconds(time)),
+          position, velocity);
+      }
+
+      const std::string map = obstacle[key_map].as<std::string>();
+      description.obstacle_routes.push_back({name, {map, trajectory}});
+    }
+    else
+    {
+      graph_required.insert(name);
+      const auto& start = obstacle[key_start];
+      if (start)
+      {
+        const auto& time = start[key_initial_time];
+        if (time)
+        {
+          initial_time = time.as<std::size_t>();
+        }
+        else
+        {
+          initial_time = 0;
+          std::cout << "Obstacle [" << name <<
+            "] is missing key [start[initial_time]]. Using default value [0]."
+                    <<
+            std::endl;
+        }
+        const auto& waypoint = start[key_initial_waypoint];
+        if (waypoint)
+        {
+          initial_waypoint = waypoint.as<std::string>();
+        }
+        else
+        {
+          throw YAML::ParserException(
+                  start.Mark(),
+                  "Obstacle [" + name + "] is missing key [" + key_initial_waypoint +
+                  "]");
+        }
+        const auto& orientation = start[key_initial_orientation];
+        if (orientation)
+        {
+          initial_orientation = orientation.as<double>();
+        }
+        else
+        {
+          initial_orientation = 0;
+          std::cout << "Robot [" << name <<
+            "] is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
+                    << std::endl;
+        }
+      }
+      else
+      {
+        throw YAML::ParserException(
+                obstacle.Mark(),
+                "Obstacle [" + name + "] is missing key [" + key_start + "]");
+      }
+
+      const auto& goal = obstacle[key_goal];
+      if (goal)
+      {
+        description.obstacle_plans.push_back({name, initial_time,
+            initial_orientation,
+            initial_waypoint, goal.as<std::string>()});
+      }
+      else
+      {
+        throw YAML::ParserException(
+                obstacle.Mark(),
+                "Obstacle [" + name + "] is missing key [" + key_goal + "]");
+      }
+    }
+  }
+
+  const YAML::Node plan = scenario_config[key_plan];
+  if (plan)
+  {
+    const auto& robot = plan[key_robot];
+    if (robot)
+    {
+      description.plan.robot = robot.as<std::string>();
+      graph_required.insert(description.plan.robot);
+    }
+    else
+    {
+      throw YAML::ParserException(
+              plan.Mark(),
+              "Plan is missing key [" + key_robot + "]");
+    }
+    const auto& start = plan[key_start];
+    if (start)
+    {
+      const auto& time = start[key_initial_time];
+      if (time)
+      {
+        description.plan.initial_time = time.as<std::size_t>();
+      }
+      else
+      {
+        description.plan.initial_time = 0;
+        std::cout <<
+          "Plan is missing key [start[initial_time]]. Using default value [0]."
+                  << std::endl;
+      }
+      const auto& waypoint = start[key_initial_waypoint];
+      if (waypoint)
+      {
+        description.plan.initial_waypoint = waypoint.as<std::string>();
+      }
+      else
+      {
+        throw YAML::ParserException(
+                start.Mark(),
+                "Plan is missing key [" + key_initial_waypoint + "]");
+      }
+      const auto& orientation = start[key_initial_orientation];
+      if (orientation)
+      {
+        description.plan.initial_orientation = orientation.as<double>();
+      }
+      else
+      {
+        description.plan.initial_orientation = 0;
+        std::cout <<
+          "Plan is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
+                  << std::endl;
+      }
+    }
+    else
+    {
+      throw YAML::ParserException(
+              plan.Mark(),
+              "Plan is missing key [" + key_start + "]");
+    }
+
+    const auto&  goal = plan[key_goal];
+    if (goal)
+    {
+      description.plan.goal = goal.as<std::string>();
+    }
+    else
+    {
+      throw YAML::ParserException(
+              plan.Mark(),
+              "Plan is missing key [" + key_goal + "]");
+    }
+  }
+  else
+  {
+    throw YAML::ParserException(
+            scenario_config.Mark(),
+            "Scenario file is missing key [" + key_plan + "]");
+  }
 
   const YAML::Node robots = scenario_config[key_robots];
 
@@ -236,6 +427,17 @@ void rmf_performance_tests::scenario::parse(
                     rmf_traffic::geometry::Circle(radius.as<double>()))
                 }};
 
+              if (graph_required.find(name) == graph_required.end())
+              {
+                description.robots.insert({
+                    name,
+                    {
+                      {},
+                      traits
+                    }});
+                continue;
+              }
+
               rmf_traffic::agv::Graph graph;
 
               if (robot[key_graph])
@@ -336,157 +538,5 @@ void rmf_performance_tests::scenario::parse(
               robot.Mark(),
               "Robot [" + name + "] is missing key [" + key_profile + "]");
     }
-  }
-
-  const YAML::Node obstacles = scenario_config[key_obstacles];
-  for (const auto& obstacle : obstacles)
-  {
-    if (!obstacle[key_robot])
-    {
-      throw YAML::ParserException(
-              obstacle.Mark(),
-              "Obstacle is missing [robot] key.");
-    }
-
-    const std::string& name = obstacle[key_robot].as<std::string>();
-
-    std::size_t initial_time;
-    double initial_orientation;
-    std::string initial_waypoint;
-
-    const auto& start = obstacle[key_start];
-    if (start)
-    {
-      const auto& time = start[key_initial_time];
-      if (time)
-      {
-        initial_time = time.as<std::size_t>(0);
-      }
-      else
-      {
-        std::cout << "Obstacle [" << name <<
-          "] is missing key [start[initial_time]]. Using default value [0]." <<
-          std::endl;
-      }
-      const auto& waypoint = start[key_initial_waypoint];
-      if (waypoint)
-      {
-        initial_waypoint = waypoint.as<std::string>();
-      }
-      else
-      {
-        throw YAML::ParserException(
-                start.Mark(),
-                "Obstacle [" + name + "] is missing key [" + key_initial_waypoint +
-                "]");
-      }
-      const auto& orientation = start[key_initial_orientation];
-      if (orientation)
-      {
-        initial_orientation = waypoint.as<double>(0);
-      }
-      else
-      {
-        std::cout << "Robot [" << name <<
-          "] is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
-                  << std::endl;
-      }
-    }
-    else
-    {
-      throw YAML::ParserException(
-              obstacle.Mark(),
-              "Obstacle [" + name + "] is missing key [" + key_start + "]");
-    }
-
-    const auto& goal = obstacle[key_goal];
-    if (goal)
-    {
-      description.obstacles.push_back({name, initial_time, initial_orientation,
-          initial_waypoint, goal.as<std::string>()});
-    }
-    else
-    {
-      throw YAML::ParserException(
-              obstacle.Mark(),
-              "Obstacle [" + name + "] is missing key [" + key_goal + "]");
-    }
-  }
-
-  const YAML::Node plan = scenario_config[key_plan];
-  if (plan)
-  {
-    const auto& robot = plan[key_robot];
-    if (robot)
-    {
-      description.plan.robot = robot.as<std::string>();
-    }
-    else
-    {
-      throw YAML::ParserException(
-              plan.Mark(),
-              "Plan is missing key [" + key_robot + "]");
-    }
-    const auto& start = plan[key_start];
-    if (start)
-    {
-      const auto& time = start[key_initial_time];
-      if (time)
-      {
-        description.plan.initial_time = time.as<std::size_t>(0);
-      }
-      else
-      {
-        std::cout <<
-          "Plan is missing key [start[initial_time]]. Using default value [0]."
-                  << std::endl;
-      }
-      const auto& waypoint = start[key_initial_waypoint];
-      if (waypoint)
-      {
-        description.plan.initial_waypoint = waypoint.as<std::string>();
-      }
-      else
-      {
-        throw YAML::ParserException(
-                start.Mark(),
-                "Plan is missing key [" + key_initial_waypoint + "]");
-      }
-      const auto& orientation = start[key_initial_orientation];
-      if (orientation)
-      {
-        description.plan.initial_orientation = waypoint.as<double>(0);
-      }
-      else
-      {
-        std::cout <<
-          "Plan is missing key [start[initial_orientation]]. Assuming initial_orientation 0."
-                  << std::endl;
-      }
-    }
-    else
-    {
-      throw YAML::ParserException(
-              plan.Mark(),
-              "Plan is missing key [" + key_start + "]");
-    }
-
-    const auto&  goal = plan[key_goal];
-    if (goal)
-    {
-      description.plan.goal = goal.as<std::string>();
-    }
-    else
-    {
-      throw YAML::ParserException(
-              plan.Mark(),
-              "Plan is missing key [" + key_goal + "]");
-    }
-  }
-  else
-  {
-    throw YAML::ParserException(
-            scenario_config.Mark(),
-            "Scenario file is missing key [" + key_plan + "]");
   }
 }

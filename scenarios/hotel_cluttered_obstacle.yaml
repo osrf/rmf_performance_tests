@@ -1,0 +1,60 @@
+samples: 1
+
+robots:
+  main:
+    limits:
+      linear: {velocity: 0.5, acceleration: 2.0}
+      angular: {velocity: 0.75, acceleration: 1.5}
+    profile:
+      footprint: {shape: circle, radius: 0.2}
+    graph: /hotel/nav_graphs/0.yaml
+
+obstacles:
+
+  - robot: main
+    start:
+      initial_time: 0
+      initial_waypoint: l1_restroom
+      initial_orientation: 0
+    goal: guest1
+
+  - robot: main
+    trajectory:
+      - {time: 0, position: [64.5, -11.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 1000, position: [64.5, -11.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L2
+
+  - robot: main
+    trajectory:
+      - {time: 0, position: [66.5, -10.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 1000, position: [66.5, -10.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L2
+
+  - robot: main
+    trajectory:
+      - {time: 0, position: [66., -9.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 1000, position: [66., -10.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L2
+
+
+  - robot: main
+    trajectory:
+      - {time: 0, position: [67.5, -9.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 1000, position: [67.5, -10.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L2
+
+
+  - robot: main
+    trajectory:
+      - {time: 0, position: [65.5, -10.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+      - {time: 400, position: [65.5, -9.8, 0.0], velocity: [0.0, 0.0, 0.0]}
+    map: L2
+
+
+plan:
+  robot: main
+  start:
+    initial_time: 0
+    initial_waypoint: guest1
+    initial_orientation: 0
+  goal: l1_restroom

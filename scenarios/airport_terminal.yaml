@@ -10,7 +10,6 @@ robots:
     graph: /airport_terminal/nav_graphs/1.yaml
 
 obstacles:
-
   - robot: main
     start:
       initial_time: 0
