@@ -117,7 +117,8 @@ double test_planner_timing_no_cache(
     }
 
     const auto p = wp.position();
-    std::cout << " (" << p[0] << ", " << p[1] << ")";
+    std::cout << " (" << wp.graph_index().value() << ": "
+              << p[0] << ", " << p[1] << ")";
 
     std::cout << " -> ";
   }

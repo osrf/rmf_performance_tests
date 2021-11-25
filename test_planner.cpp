@@ -43,21 +43,13 @@ int main(int argc, char* argv[])
 
   using namespace std::chrono_literals;
 
-  const auto& plan_robot = scenario.robots.find(scenario.plan.robot);
+  const auto& plan_robot = scenario.robots.find(scenario.plan.value().robot);
   if (plan_robot == scenario.robots.end())
   {
-    std::cout << "Plan robot [" << scenario.plan.robot <<
+    std::cout << "Plan robot [" << scenario.plan.value().robot <<
       "]'s limits and profile missing" << std::endl;
     return 1;
   }
-
-  const auto get_wp =
-    [&](const rmf_traffic::agv::Graph& graph, const std::string& name)
-    {
-      return graph.find_waypoint(name)->index();
-    };
-
-  const auto start_time = rmf_traffic::Time(rmf_traffic::Duration(0));
 
   // We'll make some "obstacles" in the environment by planning routes between
   // various waypoints.
@@ -83,12 +75,8 @@ int main(int argc, char* argv[])
       obstacles.emplace_back(
         rmf_performance_tests::add_obstacle(
           planner, database,
-          {
-            start_time + std::chrono::seconds(obstacle.initial_time),
-            get_wp(plan_robot->second.graph(), obstacle.initial_waypoint),
-            obstacle.initial_orientation * M_PI / 180.0
-          },
-          get_wp(plan_robot->second.graph(), obstacle.goal)
+          obstacle.start,
+          obstacle.goal
         )
       );
     }
@@ -102,12 +90,8 @@ int main(int argc, char* argv[])
       obstacles.emplace_back(
         rmf_performance_tests::add_obstacle(
           planner, database,
-          {
-            start_time + std::chrono::seconds(obstacle.initial_time),
-            get_wp(robot->second.graph(), obstacle.initial_waypoint),
-            obstacle.initial_orientation * M_PI / 180.0
-          },
-          get_wp(robot->second.graph(), obstacle.goal)
+          obstacle.start,
+          obstacle.goal
         )
       );
     }
@@ -124,17 +108,14 @@ int main(int argc, char* argv[])
         obstacle.route));
   }
 
-  const auto& plan = scenario.plan;
+  const auto& plan = scenario.plan.value();
 
   rmf_performance_tests::test_planner(
-    plan.initial_waypoint + " -> " + plan.goal,
+    std::to_string(plan.start.waypoint()) + " -> "
+    + std::to_string(plan.goal.waypoint()),
     scenario.samples,
     plan_robot->second.graph(), plan_robot->second.vehicle_traits(), database,
-    {
-      start_time + std::chrono::seconds(plan.initial_time),
-      get_wp(
-        plan_robot->second.graph(), plan.initial_waypoint), plan.initial_orientation
-    },
-    get_wp(plan_robot->second.graph(), plan.goal)
+    plan.start,
+    plan.goal
   );
 }

@@ -25,13 +25,11 @@
 namespace rmf_performance_tests {
 namespace scenario {
 
-struct Plan
+struct Request
 {
   std::string robot;
-  std::size_t initial_time;
-  double initial_orientation;
-  std::string initial_waypoint;
-  std::string goal;
+  rmf_traffic::agv::Plan::Start start;
+  rmf_traffic::agv::Plan::Goal goal;
 };
 
 struct Route
@@ -46,10 +44,10 @@ struct Description
 
   std::unordered_map<std::string,
     rmf_traffic::agv::Planner::Configuration> robots;
-  std::vector<Plan> obstacle_plans;
+  std::vector<Request> obstacle_plans;
   std::vector<Route> obstacle_routes;
 
-  Plan plan;
+  std::optional<Request> plan;
 };
 
 bool load(std::string file_name, YAML::Node& node);
