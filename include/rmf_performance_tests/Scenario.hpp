@@ -48,6 +48,7 @@ struct Description
   std::vector<Route> obstacle_routes;
 
   std::optional<Request> plan;
+  std::vector<Request> primers;
 };
 
 bool load(std::string file_name, YAML::Node& node);

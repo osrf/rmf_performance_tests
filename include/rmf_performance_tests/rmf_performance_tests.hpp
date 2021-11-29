@@ -48,7 +48,8 @@ double test_planner_timing_no_cache(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal);
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer);
 
 double test_planner_timing_with_cache(
   const std::string& label,
@@ -56,7 +57,8 @@ double test_planner_timing_with_cache(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal);
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer);
 
 void test_planner_timing(
   const std::string& label,
@@ -64,7 +66,8 @@ void test_planner_timing(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal);
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer);
 
 void test_planner(
   const std::string& label,
@@ -73,7 +76,8 @@ void test_planner(
   const rmf_traffic::agv::VehicleTraits& traits,
   const std::shared_ptr<rmf_traffic::schedule::Database>& database,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal);
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer);
 
 std::string get_map_directory();
 

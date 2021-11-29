@@ -48,6 +48,7 @@ const std::string key_initial_time = "initial_time";
 const std::string key_initial_waypoint = "initial_waypoint";
 const std::string key_initial_orientation = "initial_orientation";
 const std::string key_plan = "plan";
+const std::string key_primers = "primers";
 
 const rmf_traffic::agv::Planner::Configuration& check_for_robot(
   const std::string& name,
@@ -128,9 +129,13 @@ std::size_t find_initial_waypoint(
 
 rmf_performance_tests::scenario::Request parse_request(
   const YAML::Node& parent,
-  const rmf_performance_tests::scenario::Description& description)
+  const rmf_performance_tests::scenario::Description& description,
+  bool for_robot = false)
 {
-  const std::string& name = parent[key_robot].as<std::string>();
+  const std::string& name =
+      for_robot ?
+      description.plan.value().robot : parent[key_robot].as<std::string>();
+
   std::optional<rmf_traffic::Time> initial_time;
   std::optional<std::size_t> initial_waypoint;
   std::optional<double> initial_orientation;
@@ -542,6 +547,19 @@ void rmf_performance_tests::scenario::parse(
             "Scenario file is missing key [" + key_plan + "]");
   }
 
-  const YAML::Node robots = scenario_config[key_robots];
+  const YAML::Node primers_yaml = scenario_config[key_primers];
+  if (primers_yaml)
+  {
+    if (!primers_yaml.IsSequence())
+    {
+      throw YAML::ParserException(
+        primers_yaml.Mark(),
+        "Expected list for [" + key_primers + "]");
+    }
 
+    for (const auto& primer : primers_yaml)
+    {
+      description.primers.push_back(parse_request(primer, description, true));
+    }
+  }
 }

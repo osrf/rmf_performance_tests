@@ -84,20 +84,27 @@ double test_planner_timing_no_cache(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal)
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer)
 {
   // Run a test where we produce a new planner every time so we see what the
   // timing is if the cache is blank
-  std::optional<rmf_traffic::agv::Plan> plan;
-  const auto begin_time = std::chrono::steady_clock::now();
+  std::chrono::nanoseconds duration(0);
+  std::optional<rmf_traffic::agv::Plan::Result> result;
   for (std::size_t i = 0; i < samples; ++i)
   {
     rmf_traffic::agv::Planner planner(config, options);
-    plan = *planner.plan(start, goal);
+    if (primer)
+      primer(planner);
+
+    const auto begin_time = std::chrono::steady_clock::now();
+    result = planner.plan(start, goal);
+    const auto finish_time = std::chrono::steady_clock::now();
+    duration += finish_time - begin_time;
   }
-  const auto finish_time = std::chrono::steady_clock::now();
 
   const auto& graph = config.graph();
+  const auto& plan = *result;
   std::cout << "Solution: ";
   for (const auto& wp : plan->get_waypoints())
   {
@@ -125,12 +132,8 @@ double test_planner_timing_no_cache(
 
   std::cout << "Done" << std::endl;
 
-  const double total_time = rmf_traffic::time::to_seconds(
-    finish_time - begin_time);
-
-  const auto nodes = rmf_traffic::agv::Planner::Debug::node_count(
-    rmf_traffic::agv::Planner(config, options).plan(start, goal));
-
+  const double total_time = rmf_traffic::time::to_seconds(duration);
+  const auto nodes = rmf_traffic::agv::Planner::Debug::node_count(*result);
   print_result(label + " | No Cache", samples, total_time, nodes);
 
   return total_time;
@@ -142,12 +145,16 @@ double test_planner_timing_with_cache(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal)
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer)
 {
   // Run a test where we prime the planner by solving it once. Future runs will
   // not need to recompute the heuristic.
   rmf_traffic::agv::Planner planner(config, options);
-  planner.plan(start, goal);
+  if (primer)
+    primer(planner);
+  else
+    planner.plan(start, goal);
 
   const auto begin_time = std::chrono::steady_clock::now();
   for (std::size_t i = 0; i < samples; ++i)
@@ -160,7 +167,7 @@ double test_planner_timing_with_cache(
     finish_time - begin_time);
 
   const auto nodes = rmf_traffic::agv::Planner::Debug::node_count(
-    rmf_traffic::agv::Planner(config, options).plan(start, goal));
+    planner.plan(start, goal));
 
   print_result(label + " | With Cache", samples, total_time, nodes);
 
@@ -173,17 +180,29 @@ void test_planner_timing(
   const rmf_traffic::agv::Planner::Configuration& config,
   const rmf_traffic::agv::Planner::Options& options,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal)
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer)
 {
   std::cout << " --------- \n" << std::endl;
+//  for (std::size_t i=0; i < config.graph().num_lanes(); ++i)
+//  {
+//    const auto& lane = config.graph().get_lane(i);
+//    if (lane.exit().waypoint_index() == start.waypoint())
+//    {
+//      std::cout << "Approach from " << lane.entry().waypoint_index();
+//      if (const auto* name = config.graph().get_waypoint(lane.entry().waypoint_index()).name())
+//        std::cout << " [" << *name << "]";
+//      std::cout << std::endl;
+//    }
+//  }
 
   // For each variation of test, we run many samples and then see what the
   // average time is.
   const double no_cache_time = test_planner_timing_no_cache(
-    label, samples, config, options, start, goal);
+    label, samples, config, options, start, goal, primer);
 
   const double with_cache_time = test_planner_timing_with_cache(
-    label, samples, config, options, start, goal);
+    label, samples, config, options, start, goal, primer);
 
   std::cout << "Cache speed boost: x" << no_cache_time / with_cache_time
             << "\n" << std::endl;
@@ -196,14 +215,16 @@ void test_planner(
   const rmf_traffic::agv::VehicleTraits& traits,
   const std::shared_ptr<rmf_traffic::schedule::Database>& database,
   const rmf_traffic::agv::Plan::Start& start,
-  const rmf_traffic::agv::Plan::Goal& goal)
+  const rmf_traffic::agv::Plan::Goal& goal,
+  const std::function<void(rmf_traffic::agv::Planner&)>& primer)
 {
   test_planner_timing(
     label + " | No Obstacles",
     samples,
     {graph, traits},
     {nullptr},
-    start, goal
+    start, goal,
+    primer
   );
 
   const auto obstacle_validator =
@@ -215,7 +236,8 @@ void test_planner(
     samples,
     {graph, traits},
     {obstacle_validator},
-    start, goal
+    start, goal,
+    primer
   );
 }
 

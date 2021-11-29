@@ -110,12 +110,23 @@ int main(int argc, char* argv[])
 
   const auto& plan = scenario.plan.value();
 
+  std::function<void(rmf_traffic::agv::Planner&)> primer;
+  if (!scenario.primers.empty())
+  {
+    primer = [primers = scenario.primers](rmf_traffic::agv::Planner& planner)
+    {
+      for (const auto& primer : primers)
+        planner.setup(primer.start, primer.goal);
+    };
+  }
+
   rmf_performance_tests::test_planner(
     std::to_string(plan.start.waypoint()) + " -> "
     + std::to_string(plan.goal.waypoint()),
     scenario.samples,
     plan_robot->second.graph(), plan_robot->second.vehicle_traits(), database,
     plan.start,
-    plan.goal
+    plan.goal,
+    primer
   );
 }
